@@ -7,19 +7,55 @@ Usage: python benchmark.py
 import requests
 import time
 
-API_URL = "http://localhost:8000/query"
+API_URL = "https://asne-1.onrender.com/query"
 
 # Mix of simple, domain, and complex queries -- edit/expand this list
 # with real questions from your SPPU PYQ material.
 TEST_QUERIES = [
+    # --- Level 1: Rule engine matches (instant, free) ---
     "hello",
-    "what is 5 + 7",
     "define oop",
+    "full form of dbms",
+    "full form of http",
+    "what is 12 + 8",
+
+    # --- Level 2: Cache test (exact repeat of an earlier query) ---
+    "define oop",
+
+    # --- Web Technology (SPPU) ---
+    "explain the difference between GET and POST HTTP methods",
+    "what is the role of session management in web applications",
+    "explain REST API design principles with an example",
+
+    # --- Artificial Intelligence (SPPU) ---
+    "explain BFS and DFS with a real world example",
+    "what is a heuristic function in AI search algorithms",
+    "explain the difference between supervised and unsupervised learning",
+
+    # --- Cloud Computing (SPPU) ---
+    "explain the difference between IaaS PaaS and SaaS with examples",
     "what are the types of virtualization in cloud computing",
-    "explain HDFS architecture in big data",
-    "what is the difference between BFS and DFS with example",
-    "explain REST API design principles with example",
-    "compare IaaS PaaS and SaaS with real world examples and tradeoffs",
+    "explain load balancing in cloud infrastructure",
+
+    # --- Data Science / Big Data (SPPU) ---
+    "explain the HDFS architecture in big data",
+    "what is the role of MapReduce in Hadoop",
+    "explain data preprocessing steps in a machine learning pipeline",
+
+    # --- General (non-SPPU) queries ---
+    "write a short professional bio for a LinkedIn profile",
+    "explain how photosynthesis works",
+    "what are some tips for staying focused while studying",
+
+    # --- Deliberately hard/ambiguous (likely to need escalation) ---
+    "Design a distributed consensus algorithm that tolerates Byzantine faults in a 7-node cluster, and prove its correctness under network partitions",
+    "Critically compare three cache eviction strategies for a system handling 10 million requests per second and recommend one with justification",
+    "What is the exact closing stock price of Tesla on July 3rd 2026, down to the cent?",
+    "Explain the trade-offs between CAP theorem choices for a globally distributed banking system, with a recommendation",
+
+    # --- Ambiguous / conversational (tests general fallback + confidence) ---
+    "can you help me plan my exam study schedule for next week",
+    "what's the difference between a good and a great software engineer",
 ]
 
 
