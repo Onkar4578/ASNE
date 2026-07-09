@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+cache_store.json
+.env
+*.zip
