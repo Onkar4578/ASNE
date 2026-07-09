@@ -15,7 +15,6 @@ import re
 import requests
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 FAST_MODEL_NAME = "llama-3.1-8b-instant"  # free-tier, fast; check console.groq.com for current model list
 
 
@@ -24,7 +23,8 @@ def query_fast_model(query: str, domain: str = "general"):
     Calls Groq's hosted model. Returns (answer_text, confidence_score).
     Confidence is self-reported by the model (0-100), parsed from its own output.
     """
-    if not GROQ_API_KEY:
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
         raise RuntimeError(
             "GROQ_API_KEY not set. Get a free key at https://console.groq.com "
             "and set it as an environment variable."
@@ -35,7 +35,7 @@ def query_fast_model(query: str, domain: str = "general"):
     response = requests.post(
         GROQ_URL,
         headers={
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Authorization": f"Bearer {groq_api_key}",
             "Content-Type": "application/json",
         },
         json={

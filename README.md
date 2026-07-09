@@ -143,9 +143,43 @@ free-tier tradeoff, not a bug.
 - [ ] Swap `cache_store.json` for a free Render Postgres/Redis instance
       if you want the cache to survive redeploys
 
-## What each metric means for your resume
-Run `benchmark.py` and record:
-- **% resolved free**: rules + cache + fast tier, no escalation needed
-- **Route distribution**: what % handled by each layer
-- **Average latency**: response time across the test set
-- If you add a real `ANTHROPIC_API_KEY`: actual $ saved vs. an all-Claude baseline
+## Frontend dashboard
+A minimal React dashboard in `frontend/` lets you send queries to the ASNE backend and inspect:
+- Answer text
+- Route (`rule_engine`, `semantic_cache`, `fast_tier_model`, or escalation provider)
+- Confidence, latency, and per-query cost
+- Escalation reason
+
+To run locally:
+```bash
+cd frontend
+npm install
+npm start
+```
+Set `REACT_APP_ASNE_API_URL` to your deployed backend before building for Vercel.
+
+## Benchmark interpretation
+After running `python benchmark.py`, use the output to answer:
+- What percent of queries were resolved free by rules/cache/fast-tier
+- How many escalated to the premium tier?
+- Which routes were most common?
+- What was the average latency across all queries?
+- What was the average cost per escalated query?
+
+These are the most important resume metrics:
+- Free handling rate
+- Escalation rate
+- Cost savings vs. a cloud-only baseline
+- Average latency for the hybrid router
+
+## Honest limitation: model confidence and complexity
+ASNE currently uses the fast-tier model's self-reported confidence score to decide escalation, but large LLMs can still be overconfident. That is why we also add a lightweight escalation heuristic for complex queries:
+- long queries above 120 characters
+- keywords like `prove`, `design`, `critically evaluate`, `compare`, `justify`, `trade-off`
+
+This keeps the system honest by routing ambiguous or technical questions to the premium tier even when the fast-tier model reports a moderate confidence.
+
+## Example resume bullet
+- Built `ASNE`, a hybrid AI query router (FastAPI + TF-IDF + Groq + optional Claude escalation) that resolved over **XX%** of queries for free, reduced cloud escalation to **YY%**, and cut estimated API cost by **ZZ%** compared to a cloud-only baseline.
+
+Replace `XX`, `YY`, and `ZZ` with your measured benchmark results.

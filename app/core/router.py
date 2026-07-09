@@ -10,6 +10,19 @@ import time
 from app.core import rule_engine, semantic_cache, domain_classifier, fast_tier_model, cloud_model
 
 CONFIDENCE_ESCALATION_THRESHOLD = 60  # below this, escalate to cloud
+COMPLEXITY_LENGTH_THRESHOLD = 120  # characters above this are treated as more complex
+COMPLEXITY_KEYWORDS = [
+    "prove",
+    "design",
+    "critically evaluate",
+    "compare",
+    "justify",
+    "trade-off",
+    "tradeoffs",
+    "analysis",
+    "security",
+    "protocol",
+]
 
 
 def handle_query(query: str) -> dict:
@@ -41,6 +54,7 @@ def handle_query(query: str) -> dict:
 
     # ---- Level 2.5: Domain Classification ----
     domain, domain_score = domain_classifier.classify_domain(query)
+    complexity_flag = _should_escalate_by_complexity(query)
 
     # ---- Level 3: Fast Tier Model (Groq, free) ----
     try:
@@ -71,7 +85,8 @@ def handle_query(query: str) -> dict:
             reason=f"Fast tier unavailable ({e}); used {provider} as fallback.",
         )
 
-    if confidence >= CONFIDENCE_ESCALATION_THRESHOLD:
+    should_escalate = confidence < CONFIDENCE_ESCALATION_THRESHOLD or complexity_flag
+    if not should_escalate:
         semantic_cache.add_to_cache(query, answer)
         return _build_response(
             answer=answer,
@@ -87,8 +102,6 @@ def handle_query(query: str) -> dict:
     try:
         cloud_answer, cost, provider = cloud_model.query_cloud_model(query)
     except RuntimeError as e:
-        # No escalation key configured at all -- return the fast tier's
-        # lower-confidence answer rather than failing the request.
         semantic_cache.add_to_cache(query, answer)
         return _build_response(
             answer=answer,
@@ -100,15 +113,29 @@ def handle_query(query: str) -> dict:
         )
 
     semantic_cache.add_to_cache(query, cloud_answer)
+    escalation_reason = (
+        f"Query complexity suggested escalation; fast tier confidence was {confidence}. "
+        f"Escalated to {provider}."
+        if complexity_flag else
+        f"Fast tier confidence ({confidence}) was below threshold "
+        f"({CONFIDENCE_ESCALATION_THRESHOLD}); escalated to {provider}."
+    )
+
     return _build_response(
         answer=cloud_answer,
         route=provider,
         confidence=95,
         cost=cost,
         start_time=start_time,
-        reason=f"Fast tier confidence ({confidence}) was below threshold "
-               f"({CONFIDENCE_ESCALATION_THRESHOLD}); escalated to {provider}.",
+        reason=escalation_reason,
     )
+
+
+def _should_escalate_by_complexity(query: str) -> bool:
+    normalized = query.lower()
+    if len(normalized) >= COMPLEXITY_LENGTH_THRESHOLD:
+        return True
+    return any(keyword in normalized for keyword in COMPLEXITY_KEYWORDS)
 
 
 def _build_response(answer, route, confidence, cost, start_time, reason):

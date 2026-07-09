@@ -1,13 +1,15 @@
 """
-Benchmark Mode: compares cloud-only cost vs your hybrid ASNE router
-across a fixed set of test queries. Run after the server is up.
+Benchmark Mode: compares your hybrid ASNE router against a rough cloud-only cost
+estimate and reports route distribution, latency, and escalation frequency.
+Run after the server is up.
 
 Usage: python benchmark.py
 """
+import os
 import requests
 import time
 
-API_URL = "https://asne-1.onrender.com/query"
+API_URL = os.environ.get("ASNE_API_URL", "https://asne-1.onrender.com/query")
 
 # Mix of simple, domain, and complex queries -- edit/expand this list
 # with real questions from your SPPU PYQ material.
@@ -64,8 +66,8 @@ def run_benchmark():
     total_latency = 0.0
     route_counts = {}
 
-    print(f"{'Query':<55} {'Route':<25} {'Conf':<6} {'Latency':<9} {'Cost'}")
-    print("-" * 110)
+    print(f"{'Query':<55} {'Route':<35} {'Conf':<6} {'Latency':<9} {'Cost'}")
+    print("-" * 120)
 
     for query in TEST_QUERIES:
         start = time.time()
@@ -78,26 +80,35 @@ def run_benchmark():
         total_cost += data["cost_usd"]
         total_latency += elapsed
 
-        print(f"{query[:53]:<55} {route:<25} {data['confidence']:<6} "
+        print(f"{query[:53]:<55} {route:<35} {data['confidence']:<6} "
               f"{elapsed:<9} ${data['cost_usd']}")
 
-    print("-" * 110)
-    print(f"\nTotal queries: {len(TEST_QUERIES)}")
+    print("-" * 120)
+    print(f"\nUsing API endpoint: {API_URL}")
+    print(f"Total queries: {len(TEST_QUERIES)}")
     print(f"Total cost (hybrid router): ${round(total_cost, 6)}")
     print(f"Average latency: {round(total_latency / len(TEST_QUERIES), 3)}s")
-    print(f"Route distribution: {route_counts}")
+    print("Route distribution:")
+    for route, count in sorted(route_counts.items(), key=lambda item: -item[1]):
+        print(f"  {route:<45} {count}")
 
-    # Anything that isn't a rule/cache/fast-tier hit counts as an
-    # escalation (Claude or the free Groq-premium fallback).
     free_routes = ("rule_engine", "semantic_cache", "fast_tier_model")
-    escalated = sum(
+    escalated_count = sum(
         count for route, count in route_counts.items()
         if not route.startswith(free_routes)
     )
-    escalation_pct = escalated / len(TEST_QUERIES) * 100
+    escalation_pct = escalated_count / len(TEST_QUERIES) * 100
     print(f"\n% of queries that needed escalation (paid or premium tier): {escalation_pct:.1f}%")
-    print(f"=> Roughly {100 - escalation_pct:.1f}% of queries handled free "
-          f"(rules/cache/fast-tier), vs a cloud-only baseline")
+    print(f"% handled free by rules/cache/fast-tier: {100 - escalation_pct:.1f}%")
+
+    if escalated_count > 0:
+        avg_escalated_cost = total_cost / escalated_count
+        estimated_cloud_only_cost = avg_escalated_cost * len(TEST_QUERIES)
+        savings_pct = 100 * (estimated_cloud_only_cost - total_cost) / estimated_cloud_only_cost
+        print(f"Estimated hybrid savings vs cloud-only at the average escalated query cost: {savings_pct:.1f}%")
+        print(f"Average cost per escalated query: ${round(avg_escalated_cost, 6)}")
+    else:
+        print("No escalations observed, so the hybrid path is fully free in this run.")
 
 
 if __name__ == "__main__":

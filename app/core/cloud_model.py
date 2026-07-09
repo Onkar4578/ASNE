@@ -13,8 +13,6 @@ import os
 import re
 import requests
 
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_PREMIUM_MODEL = "llama-3.3-70b-versatile"  # bigger free-tier Groq model, used as fallback
 
@@ -27,10 +25,13 @@ def query_cloud_model(query: str):
     """
     Returns (answer_text, estimated_cost_usd, provider_used).
     """
-    if ANTHROPIC_API_KEY:
-        return _query_claude(query)
-    if GROQ_API_KEY:
-        return _query_groq_premium(query)
+    anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+
+    if anthropic_api_key:
+        return _query_claude(query, anthropic_api_key)
+    if groq_api_key:
+        return _query_groq_premium(query, groq_api_key)
     raise RuntimeError(
         "No API key set for Level 4. Set either ANTHROPIC_API_KEY (paid, "
         "real cost-savings demo) or GROQ_API_KEY (free fallback) as an "
@@ -38,10 +39,10 @@ def query_cloud_model(query: str):
     )
 
 
-def _query_claude(query: str):
+def _query_claude(query: str, anthropic_api_key: str):
     from anthropic import Anthropic  # imported lazily so this file loads fine without the package configured
 
-    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = Anthropic(api_key=anthropic_api_key)
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=500,
@@ -56,11 +57,11 @@ def _query_claude(query: str):
     return answer, round(cost, 6), "claude"
 
 
-def _query_groq_premium(query: str):
+def _query_groq_premium(query: str, groq_api_key: str):
     response = requests.post(
         GROQ_URL,
         headers={
-            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Authorization": f"Bearer {groq_api_key}",
             "Content-Type": "application/json",
         },
         json={
