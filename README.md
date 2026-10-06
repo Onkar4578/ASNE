@@ -179,7 +179,4 @@ ASNE currently uses the fast-tier model's self-reported confidence score to deci
 
 This keeps the system honest by routing ambiguous or technical questions to the premium tier even when the fast-tier model reports a moderate confidence.
 
-## Example resume bullet
-- Built `ASNE`, a hybrid AI query router (FastAPI + TF-IDF + Groq + optional Claude escalation) that resolved over **XX%** of queries for free, reduced cloud escalation to **YY%**, and cut estimated API cost by **ZZ%** compared to a cloud-only baseline.
 
-Replace `XX`, `YY`, and `ZZ` with your measured benchmark results.
